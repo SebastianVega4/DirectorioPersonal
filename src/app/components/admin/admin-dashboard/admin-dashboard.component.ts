@@ -239,7 +239,7 @@ export class AdminDashboardComponent implements OnInit {
   async loadContacts() {
     this.loading = true;
     const result = await this.contactService.getContacts(
-      { nombre: this.searchTerm },
+      { search: this.searchTerm },
       this.currentPage
     );
     this.contacts = result.data;
@@ -284,7 +284,7 @@ export class AdminDashboardComponent implements OnInit {
       this.mergeSearchResults = [];
       return;
     }
-    const result = await this.contactService.getContacts({ nombre: this.mergeSearchTerm }, 0);
+    const result = await this.contactService.getContacts({ search: this.mergeSearchTerm }, 0);
     this.mergeSearchResults = result.data.filter((c: Contact) => c.id !== this.mergeSource?.id);
   }
 

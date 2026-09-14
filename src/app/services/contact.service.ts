@@ -20,20 +20,20 @@ export class ContactService {
       .from('directorio')
       .select('id,foto_url,nombre_completo,programa,rol,ciudad,tags,favorito');
 
-    if (filters.nombre) {
-      query = query.ilike('nombre_completo', `%${filters.nombre}%`);
+    if (filters.search) {
+      const s = filters.search;
+      query = query.or(
+        `nombre_completo.ilike.%${s}%,documento.ilike.%${s}%,telefono_celular.ilike.%${s}%,correo_personal.ilike.%${s}%,correo_trabajo.ilike.%${s}%,codigo_universidad.ilike.%${s}%`
+      );
     }
     if (filters.programa) {
-      query = query.eq('programa', filters.programa);
+      query = query.ilike('programa', `%${filters.programa}%`);
     }
     if (filters.rol) {
-      query = query.eq('rol', filters.rol);
+      query = query.ilike('rol', `%${filters.rol}%`);
     }
     if (filters.ciudad) {
-      query = query.eq('ciudad', filters.ciudad);
-    }
-    if (filters.tags) {
-      query = query.contains('tags', [filters.tags]);
+      query = query.ilike('ciudad', `%${filters.ciudad}%`);
     }
 
     const { data, error } = await query
@@ -58,6 +58,29 @@ export class ContactService {
       .update({ favorito, updated_at: new Date().toISOString() })
       .eq('id', id);
     return !error;
+  }
+
+  async searchSuggestions(column: string, term: string): Promise<string[]> {
+    if (!term || term.length < 1) return [];
+    const { data, error } = await this.supabase.supabase
+      .from('directorio')
+      .select(column)
+      .not(column, 'is', null)
+      .ilike(column, `%${term}%`)
+      .limit(30);
+
+    if (error || !data) return [];
+
+    const seen = new Set<string>();
+    const results: string[] = [];
+    for (const row of data) {
+      const val = (row as any)[column];
+      if (val && !seen.has(val)) {
+        seen.add(val);
+        results.push(val);
+      }
+    }
+    return results.sort();
   }
 
   async getContactById(id: string): Promise<Contact | null> {

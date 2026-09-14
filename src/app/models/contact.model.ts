@@ -34,10 +34,8 @@ export interface Detail {
 }
 
 export interface ContactFilters {
-  nombre?: string;
+  search?: string;
   programa?: string;
   rol?: string;
   ciudad?: string;
-  tags?: string;
-  documento?: string;
 }
