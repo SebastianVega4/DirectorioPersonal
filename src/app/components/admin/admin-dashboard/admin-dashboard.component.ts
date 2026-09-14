@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Subject, debounceTime, Subscription } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { ContactService } from '../../../services/contact.service';
 import { Contact } from '../../../models/contact.model';
@@ -31,10 +32,20 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div class="p-4 border-b border-gray-200">
-            <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onSearch()"
-              placeholder="Buscar contactos..."
+          <div class="p-4 border-b border-gray-200 relative">
+            <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onSearchInput()"
+              placeholder="Buscar por nombre, cédula, teléfono, email..."
               class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+            @if (suggestions.length > 0 && showSuggestions) {
+              <div class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                @for (suggestion of suggestions; track suggestion) {
+                  <button type="button" (mousedown)="selectSuggestion(suggestion)"
+                    class="w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 transition">
+                    {{ suggestion }}
+                  </button>
+                }
+              </div>
+            }
           </div>
 
           @if (loading) {
@@ -213,11 +224,13 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
     }
   `,
 })
-export class AdminDashboardComponent implements OnInit {
+export class AdminDashboardComponent implements OnInit, OnDestroy {
   contacts: Contact[] = [];
   currentPage = 0;
   loading = true;
   searchTerm = '';
+  suggestions: string[] = [];
+  showSuggestions = false;
 
   showMergeModal = false;
   mergeSource: Contact | null = null;
@@ -226,27 +239,70 @@ export class AdminDashboardComponent implements OnInit {
   mergeSearchResults: Contact[] = [];
   mergeConflicts: { key: string; label: string; sourceValue: any; targetValue: any; choice: 'source' | 'target' }[] = [];
 
+  private search$ = new Subject<string>();
+  private sub?: Subscription;
+
   constructor(
     private contactService: ContactService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
+    this.sub = this.search$
+      .pipe(debounceTime(300))
+      .subscribe(term => this.doSearch(term));
     this.loadContacts();
+  }
+
+  ngOnDestroy() {
+    this.sub?.unsubscribe();
   }
 
   async loadContacts() {
     this.loading = true;
+    this.cdr.detectChanges();
     const result = await this.contactService.getContacts(
       { search: this.searchTerm },
       this.currentPage
     );
     this.contacts = result.data;
     this.loading = false;
+    this.cdr.detectChanges();
+  }
+
+  onSearchInput() {
+    this.showSuggestions = this.searchTerm.length > 0;
+    if (this.searchTerm.length > 0) {
+      this.search$.next(this.searchTerm);
+    } else {
+      this.suggestions = [];
+      this.currentPage = 0;
+      this.loadContacts();
+    }
+  }
+
+  async doSearch(term: string) {
+    if (term.length < 1) {
+      this.suggestions = [];
+      return;
+    }
+    const results = await this.contactService.searchSuggestions('nombre_completo', term);
+    this.suggestions = results.slice(0, 10);
+    this.cdr.detectChanges();
+  }
+
+  selectSuggestion(value: string) {
+    this.searchTerm = value;
+    this.showSuggestions = false;
+    this.suggestions = [];
+    this.currentPage = 0;
+    this.loadContacts();
   }
 
   onSearch() {
+    this.showSuggestions = false;
     this.currentPage = 0;
     this.loadContacts();
   }
@@ -261,6 +317,7 @@ export class AdminDashboardComponent implements OnInit {
     const success = await this.contactService.toggleFavorito(contact.id, newVal);
     if (success) {
       contact.favorito = newVal;
+      this.cdr.detectChanges();
     }
   }
 
@@ -286,6 +343,7 @@ export class AdminDashboardComponent implements OnInit {
     }
     const result = await this.contactService.getContacts({ search: this.mergeSearchTerm }, 0);
     this.mergeSearchResults = result.data.filter((c: Contact) => c.id !== this.mergeSource?.id);
+    this.cdr.detectChanges();
   }
 
   selectMergeTarget(target: Contact) {
@@ -358,7 +416,7 @@ export class AdminDashboardComponent implements OnInit {
     if (success) {
       await this.contactService.deleteContact(this.mergeSource.id);
       this.cancelMerge();
-      this.loadContacts();
+      await this.loadContacts();
     }
   }
 
@@ -368,7 +426,7 @@ export class AdminDashboardComponent implements OnInit {
     }
     const success = await this.contactService.deleteContact(contact.id);
     if (success) {
-      this.loadContacts();
+      await this.loadContacts();
     }
   }
 

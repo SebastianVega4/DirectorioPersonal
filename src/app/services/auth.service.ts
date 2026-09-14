@@ -24,7 +24,7 @@ export class AuthService {
   }
 
   async signIn(username: string, password: string): Promise<{ error?: string }> {
-    const email = `${username}@directorio.admin`;
+    const email = username.includes('@') ? username : `${username}@gmail.com`;
     console.log('Intentando login con email:', email);
     const { data, error } = await this.supabase.supabase.auth.signInWithPassword({
       email,

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { DirectoryCardComponent } from '../directory-card/directory-card.component';
 import { DirectoryFiltersComponent } from '../directory-filters/directory-filters.component';
 import { LoadingComponent } from '../../shared/loading/loading.component';
@@ -70,7 +70,10 @@ export class DirectoryListComponent implements OnInit {
   currentFilters: ContactFilters = {};
   error = '';
 
-  constructor(private contactService: ContactService) {}
+  constructor(
+    private contactService: ContactService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     this.loadContacts();
@@ -79,6 +82,7 @@ export class DirectoryListComponent implements OnInit {
   async loadContacts() {
     this.loading = true;
     this.error = '';
+    this.cdr.detectChanges();
     try {
       const result = await this.contactService.getContacts(this.currentFilters, this.currentPage);
       this.contacts = result.data;
@@ -88,15 +92,18 @@ export class DirectoryListComponent implements OnInit {
       this.error = 'Error al cargar contactos. Intenta de nuevo.';
     }
     this.loading = false;
+    this.cdr.detectChanges();
   }
 
   async loadMore() {
     this.currentPage++;
     this.loading = true;
+    this.cdr.detectChanges();
     const result = await this.contactService.getContacts(this.currentFilters, this.currentPage);
     this.contacts = [...this.contacts, ...result.data];
     this.hasMore = result.hasMore;
     this.loading = false;
+    this.cdr.detectChanges();
   }
 
   onFiltersChange(filters: ContactFilters) {
