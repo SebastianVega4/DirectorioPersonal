@@ -4,7 +4,7 @@ import { Contact, ContactFilters, Detail } from '../models/contact.model';
 
 @Injectable({ providedIn: 'root' })
 export class ContactService {
-  private readonly PAGE_SIZE = 24;
+  private readonly PAGE_SIZE = 20;
   private filterCache = new Map<string, string[]>();
 
   constructor(private supabase: SupabaseService) {}
@@ -12,15 +12,13 @@ export class ContactService {
   async getContacts(
     filters: ContactFilters = {},
     page: number = 0
-  ): Promise<{ data: any[]; count: number }> {
-    const hasFilters = Object.values(filters).some(v => v && v.trim());
+  ): Promise<{ data: any[]; hasMore: boolean }> {
+    const start = page * this.PAGE_SIZE;
+    const end = start + this.PAGE_SIZE;
 
     let query = this.supabase.supabase
       .from('directorio')
-      .select(
-        'id,foto_url,nombre_completo,programa,rol,ciudad,tags,documento',
-        { count: 'exact' }
-      );
+      .select('id,foto_url,nombre_completo,programa,rol,ciudad,tags');
 
     if (filters.nombre) {
       query = query.ilike('nombre_completo', `%${filters.nombre}%`);
@@ -37,23 +35,20 @@ export class ContactService {
     if (filters.tags) {
       query = query.contains('tags', [filters.tags]);
     }
-    if (filters.documento) {
-      query = query.ilike('documento', `%${filters.documento}%`);
-    }
 
-    const start = page * this.PAGE_SIZE;
-    const end = start + this.PAGE_SIZE - 1;
-
-    const { data, count, error } = await query
+    const { data, error } = await query
       .order('nombre_completo')
       .range(start, end);
 
     if (error) {
       console.error('Error fetching contacts:', error);
-      return { data: [], count: 0 };
+      return { data: [], hasMore: false };
     }
 
-    return { data: data || [], count: count || 0 };
+    const hasMore = (data?.length || 0) > this.PAGE_SIZE;
+    const results = hasMore ? data!.slice(0, this.PAGE_SIZE) : data || [];
+
+    return { data: results, hasMore };
   }
 
   async getContactById(id: string): Promise<Contact | null> {
@@ -78,10 +73,7 @@ export class ContactService {
       .eq('id', contactId)
       .single();
 
-    if (fetchError) {
-      console.error('Error fetching contact for detail:', fetchError);
-      return false;
-    }
+    if (fetchError) return false;
 
     const currentDetails = data.detalles || [];
     const updatedDetails = [...currentDetails, detail];
@@ -91,12 +83,7 @@ export class ContactService {
       .update({ detalles: updatedDetails, updated_at: new Date().toISOString() })
       .eq('id', contactId);
 
-    if (error) {
-      console.error('Error adding detail:', error);
-      return false;
-    }
-
-    return true;
+    return !error;
   }
 
   async createContact(contact: Partial<Contact>): Promise<Contact | null> {
@@ -106,11 +93,7 @@ export class ContactService {
       .select()
       .single();
 
-    if (error) {
-      console.error('Error creating contact:', error);
-      return null;
-    }
-
+    if (error) return null;
     return data;
   }
 
@@ -119,13 +102,7 @@ export class ContactService {
       .from('directorio')
       .update({ ...contact, updated_at: new Date().toISOString() })
       .eq('id', id);
-
-    if (error) {
-      console.error('Error updating contact:', error);
-      return false;
-    }
-
-    return true;
+    return !error;
   }
 
   async deleteContact(id: string): Promise<boolean> {
@@ -133,33 +110,27 @@ export class ContactService {
       .from('directorio')
       .delete()
       .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting contact:', error);
-      return false;
-    }
-
-    return true;
+    return !error;
   }
 
   async getUniqueValues(column: string): Promise<string[]> {
     const cached = this.filterCache.get(column);
     if (cached) return cached;
 
-    const { data, error } = await this.supabase.supabase
-      .rpc('get_unique_values', { col_name: column });
+    try {
+      const { data, error } = await this.supabase.supabase
+        .rpc('get_unique_values', { col_name: column });
 
-    if (error || !data) {
-      return this.getUniqueValuesFallback(column);
+      if (!error && data) {
+        const values = data.map((r: any) => r[column] || r.value).filter(Boolean).sort();
+        this.filterCache.set(column, values);
+        return values;
+      }
+    } catch (e) {
+      console.warn('RPC failed, using fallback', e);
     }
 
-    const values = data
-      .map((r: any) => r[column] || r.value)
-      .filter(Boolean)
-      .sort() as string[];
-
-    this.filterCache.set(column, values);
-    return values;
+    return this.getUniqueValuesFallback(column);
   }
 
   private async getUniqueValuesFallback(column: string): Promise<string[]> {
@@ -193,20 +164,18 @@ export class ContactService {
     const cached = this.filterCache.get('tags');
     if (cached) return cached;
 
-    const { data, error } = await this.supabase.supabase
-      .rpc('get_all_tags');
-
-    if (error || !data) {
-      return this.getAllTagsFallback();
+    try {
+      const { data, error } = await this.supabase.supabase.rpc('get_all_tags');
+      if (!error && data) {
+        const tags = data.map((r: any) => r.tag || r.value).filter(Boolean).sort();
+        this.filterCache.set('tags', tags);
+        return tags;
+      }
+    } catch (e) {
+      console.warn('RPC failed for tags, using fallback', e);
     }
 
-    const tags = data
-      .map((r: any) => r.tag || r.value)
-      .filter(Boolean)
-      .sort() as string[];
-
-    this.filterCache.set('tags', tags);
-    return tags;
+    return this.getAllTagsFallback();
   }
 
   private async getAllTagsFallback(): Promise<string[]> {
@@ -227,9 +196,5 @@ export class ContactService {
     const sorted = [...allTags].sort();
     this.filterCache.set('tags', sorted);
     return sorted;
-  }
-
-  clearCache() {
-    this.filterCache.clear();
   }
 }

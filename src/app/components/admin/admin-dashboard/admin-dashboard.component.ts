@@ -79,16 +79,11 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
               </table>
             </div>
 
-            @if (totalCount > 50) {
-              <div class="flex justify-center items-center space-x-2 p-4 border-t border-gray-200">
-                <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0"
-                  class="px-3 py-1 text-sm rounded border {{ currentPage === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-50' }}">
-                  Anterior
-                </button>
-                <span class="text-sm text-gray-500">{{ currentPage + 1 }} / {{ Math.ceil(totalCount / 50) }}</span>
-                <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= Math.ceil(totalCount / 50) - 1"
-                  class="px-3 py-1 text-sm rounded border {{ currentPage >= Math.ceil(totalCount / 50) - 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-50' }}">
-                  Siguiente
+            @if (contacts.length >= 50) {
+              <div class="flex justify-center p-4 border-t border-gray-200">
+                <button (click)="goToPage(currentPage + 1)"
+                  class="px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition">
+                  Cargar más
                 </button>
               </div>
             }
@@ -123,7 +118,6 @@ export class AdminDashboardComponent implements OnInit {
       this.currentPage
     );
     this.contacts = result.data;
-    this.totalCount = result.count;
     this.loading = false;
   }
 
