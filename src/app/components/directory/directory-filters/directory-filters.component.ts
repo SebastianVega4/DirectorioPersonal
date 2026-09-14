@@ -1,5 +1,6 @@
-import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subject, debounceTime, Subscription } from 'rxjs';
 import { ContactFilters } from '../../../models/contact.model';
 import { ContactService } from '../../../services/contact.service';
 
@@ -12,7 +13,7 @@ import { ContactService } from '../../../services/contact.service';
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <label class="block text-xs font-medium text-gray-500 mb-1">Nombre</label>
-          <input type="text" [(ngModel)]="filters.nombre" (ngModelChange)="onFilter()"
+          <input type="text" [(ngModel)]="filters.nombre" (ngModelChange)="onNameChange()"
             placeholder="Buscar por nombre..."
             class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
         </div>
@@ -66,7 +67,7 @@ import { ContactService } from '../../../services/contact.service';
     </div>
   `,
 })
-export class DirectoryFiltersComponent implements OnInit {
+export class DirectoryFiltersComponent implements OnInit, OnDestroy {
   @Output() filtersChange = new EventEmitter<ContactFilters>();
 
   filters: ContactFilters = {};
@@ -75,9 +76,24 @@ export class DirectoryFiltersComponent implements OnInit {
   ciudades: string[] = [];
   tags: string[] = [];
 
+  private nameSearch$ = new Subject<string>();
+  private sub?: Subscription;
+
   constructor(private contactService: ContactService) {}
 
-  async ngOnInit() {
+  ngOnInit() {
+    this.sub = this.nameSearch$
+      .pipe(debounceTime(400))
+      .subscribe(() => this.emitFilters());
+
+    this.loadFilterOptions();
+  }
+
+  ngOnDestroy() {
+    this.sub?.unsubscribe();
+  }
+
+  private async loadFilterOptions() {
     const [programs, roles, ciudades, tags] = await Promise.all([
       this.contactService.getUniquePrograms(),
       this.contactService.getUniqueRoles(),
@@ -90,12 +106,20 @@ export class DirectoryFiltersComponent implements OnInit {
     this.tags = tags.slice(0, 100);
   }
 
+  onNameChange() {
+    this.nameSearch$.next(this.filters.nombre || '');
+  }
+
   onFilter() {
+    this.emitFilters();
+  }
+
+  private emitFilters() {
     this.filtersChange.emit({ ...this.filters });
   }
 
   clearFilters() {
     this.filters = {};
-    this.onFilter();
+    this.emitFilters();
   }
 }

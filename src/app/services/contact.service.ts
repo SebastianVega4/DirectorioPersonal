@@ -5,28 +5,34 @@ import { Contact, ContactFilters, Detail } from '../models/contact.model';
 @Injectable({ providedIn: 'root' })
 export class ContactService {
   private readonly PAGE_SIZE = 24;
+  private filterCache = new Map<string, string[]>();
 
   constructor(private supabase: SupabaseService) {}
 
   async getContacts(
     filters: ContactFilters = {},
     page: number = 0
-  ): Promise<{ data: Contact[]; count: number }> {
+  ): Promise<{ data: any[]; count: number }> {
+    const hasFilters = Object.values(filters).some(v => v && v.trim());
+
     let query = this.supabase.supabase
       .from('directorio')
-      .select('*', { count: 'exact' });
+      .select(
+        'id,foto_url,nombre_completo,programa,rol,ciudad,tags,documento',
+        { count: 'exact' }
+      );
 
     if (filters.nombre) {
       query = query.ilike('nombre_completo', `%${filters.nombre}%`);
     }
     if (filters.programa) {
-      query = query.ilike('programa', `%${filters.programa}%`);
+      query = query.eq('programa', filters.programa);
     }
     if (filters.rol) {
       query = query.eq('rol', filters.rol);
     }
     if (filters.ciudad) {
-      query = query.ilike('ciudad', `%${filters.ciudad}%`);
+      query = query.eq('ciudad', filters.ciudad);
     }
     if (filters.tags) {
       query = query.contains('tags', [filters.tags]);
@@ -137,15 +143,38 @@ export class ContactService {
   }
 
   async getUniqueValues(column: string): Promise<string[]> {
+    const cached = this.filterCache.get(column);
+    if (cached) return cached;
+
+    const { data, error } = await this.supabase.supabase
+      .rpc('get_unique_values', { col_name: column });
+
+    if (error || !data) {
+      return this.getUniqueValuesFallback(column);
+    }
+
+    const values = data
+      .map((r: any) => r[column] || r.value)
+      .filter(Boolean)
+      .sort() as string[];
+
+    this.filterCache.set(column, values);
+    return values;
+  }
+
+  private async getUniqueValuesFallback(column: string): Promise<string[]> {
     const { data, error } = await this.supabase.supabase
       .from('directorio')
       .select(column)
-      .not(column, 'is', null);
+      .not(column, 'is', null)
+      .limit(5000);
 
     if (error || !data) return [];
 
     const values = [...new Set(data.map((r: any) => r[column]).filter(Boolean))];
-    return values.sort();
+    const sorted = values.sort() as string[];
+    this.filterCache.set(column, sorted);
+    return sorted;
   }
 
   async getUniquePrograms(): Promise<string[]> {
@@ -161,10 +190,31 @@ export class ContactService {
   }
 
   async getAllTags(): Promise<string[]> {
+    const cached = this.filterCache.get('tags');
+    if (cached) return cached;
+
+    const { data, error } = await this.supabase.supabase
+      .rpc('get_all_tags');
+
+    if (error || !data) {
+      return this.getAllTagsFallback();
+    }
+
+    const tags = data
+      .map((r: any) => r.tag || r.value)
+      .filter(Boolean)
+      .sort() as string[];
+
+    this.filterCache.set('tags', tags);
+    return tags;
+  }
+
+  private async getAllTagsFallback(): Promise<string[]> {
     const { data, error } = await this.supabase.supabase
       .from('directorio')
       .select('tags')
-      .not('tags', 'is', null);
+      .not('tags', 'is', null)
+      .limit(5000);
 
     if (error || !data) return [];
 
@@ -174,6 +224,12 @@ export class ContactService {
         r.tags.forEach((t: string) => allTags.add(t));
       }
     });
-    return [...allTags].sort();
+    const sorted = [...allTags].sort();
+    this.filterCache.set('tags', sorted);
+    return sorted;
+  }
+
+  clearCache() {
+    this.filterCache.clear();
   }
 }
