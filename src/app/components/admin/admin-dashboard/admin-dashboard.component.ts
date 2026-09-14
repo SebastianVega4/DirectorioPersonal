@@ -33,9 +33,16 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-200">
           <div class="p-4 border-b border-gray-200 relative">
-            <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onSearchInput()"
-              placeholder="Buscar por nombre, cédula, teléfono, email..."
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+            <div class="flex gap-2">
+              <input type="text" [(ngModel)]="searchTerm" (keydown.enter)="onSearch()"
+                (ngModelChange)="onSearchInput()"
+                placeholder="Buscar por nombre, cédula, teléfono, email..."
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+              <button (click)="onSearch()"
+                class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">
+                Buscar
+              </button>
+            </div>
             @if (suggestions.length > 0 && showSuggestions) {
               <div class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                 @for (suggestion of suggestions; track suggestion) {
@@ -93,8 +100,8 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
                       <td class="px-4 py-3 text-gray-600">{{ contact.ciudad || '-' }}</td>
                       <td class="px-4 py-3">
                         <div class="flex space-x-2">
-                          <a [routerLink]="['/contacto', contact.id]"
-                            class="text-indigo-600 hover:text-indigo-800 text-xs font-medium">Ver</a>
+                          <a [routerLink]="['/admin-secreto/dashboard/editar', contact.id]"
+                            class="text-indigo-600 hover:text-indigo-800 text-xs font-medium">Editar</a>
                           <button (click)="startMerge(contact)"
                             class="text-blue-600 hover:text-blue-800 text-xs font-medium">Merge</button>
                           <button (click)="deleteContact(contact)"

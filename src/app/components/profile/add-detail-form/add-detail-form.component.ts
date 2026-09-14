@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Detail } from '../../../models/contact.model';
 
@@ -36,12 +36,13 @@ export class AddDetailFormComponent {
   submitting = false;
   success = false;
 
-  constructor() {}
+  constructor(private cdr: ChangeDetectorRef) {}
 
   async submit() {
     if (!this.autor.trim() || !this.nota.trim()) return;
 
     this.submitting = true;
+    this.cdr.detectChanges();
     const detail: Detail = {
       autor: this.autor.trim(),
       nota: this.nota.trim(),
@@ -52,7 +53,11 @@ export class AddDetailFormComponent {
     this.nota = '';
     this.success = true;
     this.submitting = false;
+    this.cdr.detectChanges();
 
-    setTimeout(() => (this.success = false), 3000);
+    setTimeout(() => {
+      this.success = false;
+      this.cdr.detectChanges();
+    }, 3000);
   }
 }

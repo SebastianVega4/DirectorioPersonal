@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, Subscription, switchMap, of } from 'rxjs';
 import { ContactFilters } from '../../../models/contact.model';
@@ -95,7 +95,10 @@ export class DirectoryFiltersComponent implements OnInit, OnDestroy {
   private sub?: Subscription;
   private initialized = false;
 
-  constructor(private contactService: ContactService) {}
+  constructor(
+    private contactService: ContactService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     this.sub = this.search$
@@ -137,6 +140,7 @@ export class DirectoryFiltersComponent implements OnInit, OnDestroy {
       if (column === 'programa') this.programas = [];
       if (column === 'rol') this.roles = [];
       if (column === 'ciudad') this.ciudades = [];
+      this.cdr.detectChanges();
       return;
     }
 
@@ -144,6 +148,7 @@ export class DirectoryFiltersComponent implements OnInit, OnDestroy {
     if (column === 'programa') this.programas = results;
     if (column === 'rol') this.roles = results;
     if (column === 'ciudad') this.ciudades = results;
+    this.cdr.detectChanges();
   }
 
   selectPrograma(val: string) {

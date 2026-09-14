@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ContactService } from '../../../services/contact.service';
@@ -166,7 +166,8 @@ export class AdminContactFormComponent implements OnInit {
   constructor(
     private contactService: ContactService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -182,6 +183,7 @@ export class AdminContactFormComponent implements OnInit {
     if (contact) {
       this.contact = contact;
       this.tagsInput = (contact.tags || []).join(', ');
+      this.cdr.detectChanges();
     }
   }
 
@@ -189,6 +191,7 @@ export class AdminContactFormComponent implements OnInit {
     this.saving = true;
     this.error = '';
     this.success = false;
+    this.cdr.detectChanges();
 
     this.contact.tags = this.tagsInput
       .split(',')
@@ -221,6 +224,7 @@ export class AdminContactFormComponent implements OnInit {
     }
 
     this.saving = false;
+    this.cdr.detectChanges();
   }
 
   goBack() {

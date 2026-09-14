@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy, NgZone } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ContactService } from '../../../services/contact.service';
 import { Contact, Detail } from '../../../models/contact.model';
 import { AddDetailFormComponent } from '../add-detail-form/add-detail-form.component';
@@ -8,16 +8,16 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
 @Component({
   selector: 'app-profile-view',
   standalone: true,
-  imports: [RouterLink, AddDetailFormComponent, LoadingComponent],
+  imports: [AddDetailFormComponent, LoadingComponent],
   template: `
     <div class="min-h-screen bg-gray-50">
       <div class="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        <a routerLink="/" class="inline-flex items-center text-sm text-gray-500 hover:text-indigo-600 mb-6 transition">
+        <button (click)="goBack()" class="inline-flex items-center text-sm text-gray-500 hover:text-indigo-600 mb-6 transition">
           <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
           </svg>
           Volver al directorio
-        </a>
+        </button>
 
         @if (loading) {
           <app-loading message="Cargando perfil..." />
@@ -215,8 +215,9 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private contactService: ContactService,
-    private ngZone: NgZone
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -225,6 +226,7 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
       this.loadContact(id);
     } else {
       this.loading = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -237,12 +239,14 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
 
   async loadContact(id: string) {
     this.loading = true;
+    this.cdr.detectChanges();
     try {
       this.contact = await this.contactService.getContactById(id);
     } catch (e) {
       console.error('Error loading contact:', e);
     }
     this.loading = false;
+    this.cdr.detectChanges();
 
     if (this.contact?.latitud && this.contact?.longitud && !this.mapLoaded) {
       setTimeout(() => this.initMap(), 300);
@@ -256,21 +260,19 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
       const container = document.getElementById('map-container');
       if (!container) return;
 
-      this.ngZone.runOutsideAngular(() => {
-        const map = L.map('map-container', {
-          center: [this.contact!.latitud!, this.contact!.longitud!],
-          zoom: 14,
-        });
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap',
-        }).addTo(map);
-
-        L.marker([this.contact!.latitud!, this.contact!.longitud!]).addTo(map);
-
-        setTimeout(() => map.invalidateSize(), 100);
-        this.map = map;
+      const map = L.map('map-container', {
+        center: [this.contact!.latitud!, this.contact!.longitud!],
+        zoom: 14,
       });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+      }).addTo(map);
+
+      L.marker([this.contact!.latitud!, this.contact!.longitud!]).addTo(map);
+
+      setTimeout(() => map.invalidateSize(), 100);
+      this.map = map;
       this.mapLoaded = true;
     } catch (e) {
       console.error('Error loading map:', e);
@@ -305,6 +307,16 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     const success = await this.contactService.addDetail(this.contact.id, detail);
     if (success) {
       this.contact.detalles = [...(this.contact.detalles || []), detail];
+      this.cdr.detectChanges();
+    }
+  }
+
+  goBack() {
+    const referer = this.route.snapshot.queryParams['from'];
+    if (referer === 'admin') {
+      this.router.navigate(['/admin-secreto/dashboard']);
+    } else {
+      this.router.navigate(['/']);
     }
   }
 }
