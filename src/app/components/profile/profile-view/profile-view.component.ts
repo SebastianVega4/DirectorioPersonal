@@ -31,10 +31,10 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
             <div class="px-6 pb-6">
               <div class="flex flex-col sm:flex-row sm:items-end sm:space-x-5 -mt-16">
                 <div class="flex-shrink-0">
-                  @if (contact.foto_url) {
+                  @if (contact.foto_url && !imageError) {
                     <img [src]="contact.foto_url" [alt]="contact.nombre_completo"
                       class="w-28 h-28 rounded-2xl object-cover border-4 border-white shadow-lg"
-                      (error)="onImageError($event)" />
+                      (error)="imageError = true" />
                   } @else {
                     <div class="w-28 h-28 rounded-2xl bg-indigo-100 border-4 border-white shadow-lg flex items-center justify-center">
                       <span class="text-indigo-600 font-bold text-3xl">{{ getInitials() }}</span>
@@ -213,6 +213,8 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
   private mapLoaded = false;
   private map: any = null;
 
+  imageError = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -295,11 +297,6 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     if (!dateStr) return '';
     const date = new Date(dateStr);
     return date.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
-  }
-
-  onImageError(event: Event) {
-    const img = event.target as HTMLImageElement;
-    img.style.display = 'none';
   }
 
   async onDetailAdded(detail: Detail) {

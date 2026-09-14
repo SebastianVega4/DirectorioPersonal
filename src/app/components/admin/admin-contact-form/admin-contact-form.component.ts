@@ -75,7 +75,15 @@ import { Contact } from '../../../models/contact.model';
               <div class="flex items-start space-x-5">
                 <div class="flex-shrink-0">
                   @if (contact.foto_url) {
-                    <img [src]="contact.foto_url" class="w-20 h-20 rounded-2xl object-cover border-2 border-gray-200" (error)="contact.foto_url = null" />
+                    <img [src]="contact.foto_url" class="w-20 h-20 rounded-2xl object-cover border-2 border-gray-200"
+                      (error)="photoError = true" [hidden]="photoError" />
+                    @if (photoError) {
+                      <div class="w-20 h-20 rounded-2xl bg-red-50 border-2 border-dashed border-red-300 flex items-center justify-center">
+                        <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                        </svg>
+                      </div>
+                    }
                   } @else {
                     <div class="w-20 h-20 rounded-2xl bg-indigo-100 border-2 border-dashed border-indigo-300 flex items-center justify-center">
                       <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,9 +95,15 @@ import { Contact } from '../../../models/contact.model';
                 <div class="flex-1">
                   <label class="block text-sm font-medium text-gray-700 mb-1.5">URL de la imagen</label>
                   <input type="url" [(ngModel)]="contact.foto_url" name="foto_url"
+                    (ngModelChange)="photoError = false"
                     placeholder="https://ejemplo.com/foto.jpg"
                     class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
-                  <p class="text-xs text-gray-400 mt-1.5">Pega una URL de imagen (Google Fotos, Instagram, etc.)</p>
+                  <div class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p class="text-xs text-amber-700 font-medium mb-1">URLs que NO funcionan:</p>
+                    <p class="text-xs text-amber-600">Instagram, Facebook, TikTok (bloquean imágenes por CORS)</p>
+                    <p class="text-xs text-amber-700 font-medium mt-2 mb-1">URLs que SÍ funcionan:</p>
+                    <p class="text-xs text-amber-600">Google Fotos (compartir), Imgur, WhatsApp (descargar y subir a Imgur), cualquier enlace directo a .jpg/.png</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -218,6 +232,7 @@ export class AdminContactFormComponent implements OnInit, OnDestroy, AfterViewIn
   saving = false;
   error = '';
   success = false;
+  photoError = false;
   private map: any = null;
   private mapReady = false;
   private mapInitTimer: any = null;
