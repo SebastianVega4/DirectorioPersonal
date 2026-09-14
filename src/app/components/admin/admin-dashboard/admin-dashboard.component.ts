@@ -129,24 +129,28 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
 
     @if (showMergeModal) {
       <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div class="p-6 border-b border-gray-200">
+        <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div class="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
             <div class="flex justify-between items-center">
-              <h2 class="text-lg font-bold text-gray-900">Merge Contacts</h2>
-              <button (click)="cancelMerge()" class="text-gray-400 hover:text-gray-600">
+              <div>
+                <h2 class="text-lg font-bold text-gray-900">Fusionar Contactos</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Se conservará: <strong class="text-green-700">{{ mergeTarget?.nombre_completo }}</strong></p>
+                <p class="text-sm text-gray-500">Se eliminará: <strong class="text-red-600">{{ mergeSource?.nombre_completo }}</strong></p>
+              </div>
+              <button (click)="cancelMerge()" class="text-gray-400 hover:text-gray-600 p-1">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
               </button>
             </div>
-            <p class="text-sm text-gray-500 mt-1">Busca el contacto con el que quieres fusionar "{{ mergeSource?.nombre_completo }}"</p>
           </div>
 
           <div class="p-6">
             @if (!mergeTarget) {
+              <p class="text-sm text-gray-500 mb-3">Busca el contacto con el que quieres fusionar:</p>
               <input type="text" [(ngModel)]="mergeSearchTerm" (ngModelChange)="searchMergeTarget()"
-                placeholder="Buscar contacto destino..."
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none mb-4" />
+                placeholder="Escribir nombre del contacto destino..."
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none mb-4" />
 
               @if (mergeSearchResults.length > 0) {
                 <div class="space-y-2 max-h-60 overflow-y-auto">
@@ -154,73 +158,86 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
                     <button (click)="selectMergeTarget(result)"
                       class="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition">
                       <div class="font-medium text-gray-900">{{ result.nombre_completo }}</div>
-                      <div class="text-xs text-gray-500">{{ result.programa || '' }} {{ result.rol || '' }}</div>
+                      <div class="text-xs text-gray-500">{{ result.programa || '' }} {{ result.rol ? '- ' + result.rol : '' }}</div>
                     </button>
                   }
                 </div>
+              } @else if (mergeSearchTerm.length >= 2) {
+                <p class="text-sm text-gray-400 text-center py-4">No se encontraron contactos</p>
               }
             } @else {
-              <div class="grid grid-cols-2 gap-4 mb-6">
-                <div class="p-4 rounded-xl bg-blue-50 border border-blue-200">
-                  <h3 class="font-semibold text-blue-800 mb-3 text-sm">FUENTE (se eliminará)</h3>
-                  <div class="space-y-2 text-sm">
-                    <div><span class="text-gray-500">Nombre:</span> {{ mergeSource?.nombre_completo }}</div>
-                    <div><span class="text-gray-500">Programa:</span> {{ mergeSource?.programa || '-' }}</div>
-                    <div><span class="text-gray-500">Rol:</span> {{ mergeSource?.rol || '-' }}</div>
-                    <div><span class="text-gray-500">Ciudad:</span> {{ mergeSource?.ciudad || '-' }}</div>
-                    <div><span class="text-gray-500">Email personal:</span> {{ mergeSource?.correo_personal || '-' }}</div>
-                    <div><span class="text-gray-500">Email trabajo:</span> {{ mergeSource?.correo_trabajo || '-' }}</div>
-                    <div><span class="text-gray-500">Teléfono:</span> {{ mergeSource?.telefono_celular || '-' }}</div>
+              @if (mergeConflicts.length > 0) {
+                <div class="mb-6">
+                  <h3 class="text-sm font-semibold text-amber-700 mb-3 flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                    Campos en conflicto - elige cuál conservar
+                  </h3>
+                  <div class="space-y-3">
+                    @for (field of mergeConflicts; track field.key) {
+                      <div class="p-4 rounded-xl border border-amber-200 bg-amber-50/50">
+                        <label class="text-xs font-semibold text-amber-800 uppercase tracking-wide block mb-3">{{ field.label }}</label>
+                        <div class="grid grid-cols-2 gap-3">
+                          <label class="flex items-start space-x-2.5 cursor-pointer p-2 rounded-lg border-2 transition"
+                            [class]="field.choice === 'source' ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'">
+                            <input type="radio" [name]="'conflict_' + field.key" value="source"
+                              [(ngModel)]="field.choice" class="text-blue-600 mt-0.5" />
+                            <div>
+                              <span class="text-sm font-medium text-gray-900 block">{{ field.sourceValue }}</span>
+                              <span class="text-xs text-blue-600">Fuente (se eliminará)</span>
+                            </div>
+                          </label>
+                          <label class="flex items-start space-x-2.5 cursor-pointer p-2 rounded-lg border-2 transition"
+                            [class]="field.choice === 'target' ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-gray-300'">
+                            <input type="radio" [name]="'conflict_' + field.key" value="target"
+                              [(ngModel)]="field.choice" class="text-green-600 mt-0.5" />
+                            <div>
+                              <span class="text-sm font-medium text-gray-900 block">{{ field.targetValue }}</span>
+                              <span class="text-xs text-green-600">Destino (se conservará)</span>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    }
                   </div>
                 </div>
+              } @else {
+                <div class="text-center py-4 mb-4 bg-gray-50 rounded-xl">
+                  <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  <p class="text-sm text-gray-600">No hay conflictos - todos los campos son iguales o están vacíos</p>
+                </div>
+              }
 
-                <div class="p-4 rounded-xl bg-green-50 border border-green-200">
-                  <h3 class="font-semibold text-green-800 mb-3 text-sm">DESTINO (se conservará)</h3>
-                  <div class="space-y-2 text-sm">
-                    <div><span class="text-gray-500">Nombre:</span> {{ mergeTarget?.nombre_completo }}</div>
-                    <div><span class="text-gray-500">Programa:</span> {{ mergeTarget?.programa || '-' }}</div>
-                    <div><span class="text-gray-500">Rol:</span> {{ mergeTarget?.rol || '-' }}</div>
-                    <div><span class="text-gray-500">Ciudad:</span> {{ mergeTarget?.ciudad || '-' }}</div>
-                    <div><span class="text-gray-500">Email personal:</span> {{ mergeTarget?.correo_personal || '-' }}</div>
-                    <div><span class="text-gray-500">Email trabajo:</span> {{ mergeTarget?.correo_trabajo || '-' }}</div>
-                    <div><span class="text-gray-500">Teléfono:</span> {{ mergeTarget?.telefono_celular || '-' }}</div>
+              @if (mergeAutoFill.length > 0) {
+                <div class="mb-6">
+                  <h3 class="text-sm font-semibold text-blue-700 mb-3 flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Se completarán automáticamente
+                  </h3>
+                  <p class="text-xs text-gray-500 mb-3">Estos campos están vacíos en el destino pero tienen datos en la fuente:</p>
+                  <div class="space-y-2">
+                    @for (item of mergeAutoFill; track item.key) {
+                      <div class="flex items-center justify-between p-3 rounded-lg bg-blue-50 border border-blue-200">
+                        <div>
+                          <span class="text-xs font-medium text-blue-800">{{ item.label }}</span>
+                          <span class="text-sm text-gray-900 block">{{ item.value }}</span>
+                        </div>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                          <input type="checkbox" [(ngModel)]="item.selected" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                          <span class="text-xs text-gray-500">Copiar</span>
+                        </label>
+                      </div>
+                    }
                   </div>
                 </div>
-              </div>
+              }
 
-              <h3 class="font-semibold text-gray-800 mb-3 text-sm">Campos con conflicto - elige cuál conservar:</h3>
-              <div class="space-y-3 mb-6">
-                @for (field of mergeConflicts; track field.key) {
-                  <div class="p-3 rounded-lg border border-amber-200 bg-amber-50">
-                    <label class="text-xs font-medium text-amber-700 block mb-2">{{ field.label }}</label>
-                    <div class="flex space-x-4">
-                      <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="radio" [name]="'conflict_' + field.key" value="source"
-                          [(ngModel)]="field.choice" class="text-blue-600" />
-                        <span class="text-sm">{{ field.sourceValue || '(vacío)' }}</span>
-                        <span class="text-xs text-blue-600">(fuente)</span>
-                      </label>
-                      <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="radio" [name]="'conflict_' + field.key" value="target"
-                          [(ngModel)]="field.choice" class="text-green-600" />
-                        <span class="text-sm">{{ field.targetValue || '(vacío)' }}</span>
-                        <span class="text-xs text-green-600">(destino)</span>
-                      </label>
-                    </div>
-                  </div>
-                }
-                @if (mergeConflicts.length === 0) {
-                  <p class="text-sm text-gray-500">No hay conflictos - se fusionará automáticamente.</p>
-                }
-              </div>
-
-              <div class="flex justify-end space-x-3">
+              <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                 <button (click)="cancelMerge()"
-                  class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                  class="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
                   Cancelar
                 </button>
                 <button (click)="executeMerge()"
-                  class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
+                  class="px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
                   Fusionar contactos
                 </button>
               </div>
@@ -245,6 +262,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   mergeSearchTerm = '';
   mergeSearchResults: Contact[] = [];
   mergeConflicts: { key: string; label: string; sourceValue: any; targetValue: any; choice: 'source' | 'target' }[] = [];
+  mergeAutoFill: { key: string; label: string; value: any; selected: boolean }[] = [];
 
   private search$ = new Subject<string>();
   private sub?: Subscription;
@@ -370,12 +388,18 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       { key: 'correo_trabajo', label: 'Email trabajo' },
       { key: 'telefono_celular', label: 'Teléfono' },
       { key: 'documento', label: 'Documento' },
+      { key: 'foto_url', label: 'Foto' },
+      { key: 'codigo_universidad', label: 'Código universidad' },
+      { key: 'fecha_nacimiento', label: 'Fecha nacimiento' },
     ];
 
     this.mergeConflicts = [];
+    this.mergeAutoFill = [];
+
     for (const field of fields) {
       const sv = (this.mergeSource as any)[field.key];
       const tv = (this.mergeTarget as any)[field.key];
+
       if (sv && tv && sv !== tv) {
         this.mergeConflicts.push({
           key: field.key,
@@ -383,6 +407,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           sourceValue: sv,
           targetValue: tv,
           choice: 'target',
+        });
+      } else if (!tv && sv) {
+        this.mergeAutoFill.push({
+          key: field.key,
+          label: field.label,
+          value: sv,
+          selected: true,
         });
       }
     }
@@ -397,9 +428,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       (merged as any)[conflict.key] = conflict.choice === 'source' ? conflict.sourceValue : conflict.targetValue;
     }
 
-    for (const field of ['correo_personal', 'correo_trabajo', 'telefono_celular']) {
-      if (!merged[field as keyof Contact] && (this.mergeSource as any)[field]) {
-        (merged as any)[field] = (this.mergeSource as any)[field];
+    for (const item of this.mergeAutoFill) {
+      if (item.selected) {
+        (merged as any)[item.key] = item.value;
       }
     }
 
@@ -414,10 +445,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       ...(this.mergeSource.detalles || []),
     ];
     merged.detalles = allDetails;
-
-    if (!merged.foto_url && this.mergeSource.foto_url) {
-      merged.foto_url = this.mergeSource.foto_url;
-    }
 
     const success = await this.contactService.updateContact(this.mergeTarget.id, merged);
     if (success) {
