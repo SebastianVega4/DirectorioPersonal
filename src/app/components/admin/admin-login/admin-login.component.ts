@@ -62,10 +62,22 @@ export class AdminLoginComponent {
     this.loading = true;
     this.error = '';
 
+    if (!this.username || !this.password) {
+      this.error = 'Por favor ingresa usuario y contraseña.';
+      this.loading = false;
+      return;
+    }
+
     const result = await this.authService.signIn(this.username, this.password);
 
     if (result.error) {
-      this.error = 'Credenciales incorrectas. Intenta de nuevo.';
+      if (result.error.includes('Invalid login credentials')) {
+        this.error = 'Usuario o contraseña incorrectos. Verifica tus credenciales.';
+      } else if (result.error.includes('Email not confirmed')) {
+        this.error = 'El correo no ha sido confirmado. Contacta al administrador.';
+      } else {
+        this.error = `Error: ${result.error}`;
+      }
       this.loading = false;
     } else {
       this.router.navigate(['/admin-secreto/dashboard']);

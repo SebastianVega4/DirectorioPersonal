@@ -47,10 +47,11 @@ export class ContactService {
       .range(start, end);
 
     if (error) {
-      console.error('Error fetching contacts:', error);
+      console.error('Error fetching contacts:', error.message, error.code, error.details);
       return { data: [], hasMore: false };
     }
 
+    console.log('Contacts loaded:', data?.length || 0, 'records');
     const hasMore = (data?.length || 0) > this.PAGE_SIZE;
     const results = hasMore ? data!.slice(0, this.PAGE_SIZE) : data || [];
 

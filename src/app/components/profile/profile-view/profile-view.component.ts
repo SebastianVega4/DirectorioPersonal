@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ContactService } from '../../../services/contact.service';
 import { Contact, Detail } from '../../../models/contact.model';
@@ -207,14 +207,16 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
     </div>
   `,
 })
-export class ProfileViewComponent implements OnInit {
+export class ProfileViewComponent implements OnInit, OnDestroy {
   contact: Contact | null = null;
   loading = true;
   private mapLoaded = false;
+  private map: any = null;
 
   constructor(
     private route: ActivatedRoute,
-    private contactService: ContactService
+    private contactService: ContactService,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit() {
@@ -223,6 +225,13 @@ export class ProfileViewComponent implements OnInit {
       this.loadContact(id);
     } else {
       this.loading = false;
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.map) {
+      this.map.remove();
+      this.map = null;
     }
   }
 
@@ -247,18 +256,21 @@ export class ProfileViewComponent implements OnInit {
       const container = document.getElementById('map-container');
       if (!container) return;
 
-      const map = L.map('map-container', {
-        center: [this.contact!.latitud!, this.contact!.longitud!],
-        zoom: 14,
+      this.ngZone.runOutsideAngular(() => {
+        const map = L.map('map-container', {
+          center: [this.contact!.latitud!, this.contact!.longitud!],
+          zoom: 14,
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap',
+        }).addTo(map);
+
+        L.marker([this.contact!.latitud!, this.contact!.longitud!]).addTo(map);
+
+        setTimeout(() => map.invalidateSize(), 100);
+        this.map = map;
       });
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap',
-      }).addTo(map);
-
-      L.marker([this.contact!.latitud!, this.contact!.longitud!]).addTo(map);
-
-      setTimeout(() => map.invalidateSize(), 100);
       this.mapLoaded = true;
     } catch (e) {
       console.error('Error loading map:', e);

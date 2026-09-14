@@ -21,6 +21,16 @@ import { Contact, ContactFilters } from '../../../models/contact.model';
 
         @if (loading && contacts.length === 0) {
           <app-loading message="Cargando contactos..." />
+        } @else if (error) {
+          <div class="text-center py-16">
+            <svg class="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+            </svg>
+            <p class="mt-4 text-red-500">{{ error }}</p>
+            <button (click)="loadContacts()" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition">
+              Reintentar
+            </button>
+          </div>
         } @else if (contacts.length === 0) {
           <div class="text-center py-16">
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,6 +68,7 @@ export class DirectoryListComponent implements OnInit {
   hasMore = true;
   loading = true;
   currentFilters: ContactFilters = {};
+  error = '';
 
   constructor(private contactService: ContactService) {}
 
@@ -67,9 +78,15 @@ export class DirectoryListComponent implements OnInit {
 
   async loadContacts() {
     this.loading = true;
-    const result = await this.contactService.getContacts(this.currentFilters, this.currentPage);
-    this.contacts = result.data;
-    this.hasMore = result.hasMore;
+    this.error = '';
+    try {
+      const result = await this.contactService.getContacts(this.currentFilters, this.currentPage);
+      this.contacts = result.data;
+      this.hasMore = result.hasMore;
+    } catch (e) {
+      console.error('Error in loadContacts:', e);
+      this.error = 'Error al cargar contactos. Intenta de nuevo.';
+    }
     this.loading = false;
   }
 

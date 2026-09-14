@@ -25,13 +25,16 @@ export class AuthService {
 
   async signIn(username: string, password: string): Promise<{ error?: string }> {
     const email = `${username}@directorio.admin`;
-    const { error } = await this.supabase.supabase.auth.signInWithPassword({
+    console.log('Intentando login con email:', email);
+    const { data, error } = await this.supabase.supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) {
+      console.error('Error de autenticación:', error.message, error.status);
       return { error: error.message };
     }
+    console.log('Login exitoso para:', data.user?.email);
     this.isLoggedIn$.next(true);
     return {};
   }

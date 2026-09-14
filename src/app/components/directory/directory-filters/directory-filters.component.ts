@@ -93,6 +93,7 @@ export class DirectoryFiltersComponent implements OnInit, OnDestroy {
 
   private search$ = new Subject<string>();
   private sub?: Subscription;
+  private initialized = false;
 
   constructor(private contactService: ContactService) {}
 
@@ -100,6 +101,7 @@ export class DirectoryFiltersComponent implements OnInit, OnDestroy {
     this.sub = this.search$
       .pipe(debounceTime(300))
       .subscribe(term => this.doSearch(term));
+    setTimeout(() => { this.initialized = true; }, 0);
   }
 
   ngOnDestroy() {
@@ -107,6 +109,7 @@ export class DirectoryFiltersComponent implements OnInit, OnDestroy {
   }
 
   onSearchChange() {
+    if (!this.initialized) return;
     this.emitFilters();
   }
 
