@@ -293,7 +293,7 @@ export class AdminContactFormComponent implements OnInit, OnDestroy, AfterViewIn
         return;
       }
 
-      const L = await import('leaflet');
+      const L = await import('leaflet').then(m => m.default || m);
 
       const defaultLat = this.contact.latitud || 4.6097;
       const defaultLng = this.contact.longitud || -74.0817;

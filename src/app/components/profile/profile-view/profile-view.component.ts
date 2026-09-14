@@ -266,7 +266,7 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const L = await import('leaflet');
+      const L = await import('leaflet').then(m => m.default || m);
 
       const map = L.map('map-container', {
         center: [this.contact!.latitud!, this.contact!.longitud!],

@@ -506,24 +506,40 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       }
     }
 
-    const allTags = new Set<string>([
-      ...(this.mergeTarget.tags || []),
-      ...(this.mergeSource.tags || []),
-    ]);
-    merged.tags = [...allTags];
+    if (this.mergeTarget.tags || this.mergeSource.tags) {
+      const allTags = new Set<string>([
+        ...(this.mergeTarget.tags || []),
+        ...(this.mergeSource.tags || []),
+        ...(merged.tags || []),
+      ]);
+      merged.tags = [...allTags];
+    }
 
-    const allDetails = [
-      ...(this.mergeTarget.detalles || []),
-      ...(this.mergeSource.detalles || []),
-    ];
-    merged.detalles = allDetails;
+    if (this.mergeTarget.detalles || this.mergeSource.detalles) {
+      const allDetails = [
+        ...(merged.detalles || []),
+        ...(this.mergeTarget.detalles || []),
+        ...(this.mergeSource.detalles || []),
+      ];
+      merged.detalles = allDetails;
+    }
 
     if (!merged.redes_sociales) merged.redes_sociales = {};
-    merged.redes_sociales = {
-      ...this.mergeSource.redes_sociales,
-      ...this.mergeTarget.redes_sociales,
-      ...merged.redes_sociales,
-    };
+    const srcRs: any = this.mergeSource.redes_sociales || {};
+    const tgtRs: any = this.mergeTarget.redes_sociales || {};
+    const mergedRs: any = merged.redes_sociales;
+    for (const key of Object.keys(srcRs)) {
+      if (!mergedRs[key] && tgtRs[key]) {
+        mergedRs[key] = tgtRs[key];
+      } else if (!mergedRs[key] && srcRs[key]) {
+        mergedRs[key] = srcRs[key];
+      }
+    }
+    for (const key of Object.keys(tgtRs)) {
+      if (!mergedRs[key] && tgtRs[key]) {
+        mergedRs[key] = tgtRs[key];
+      }
+    }
 
     const success = await this.contactService.updateContact(this.mergeTarget.id, merged);
     if (success) {
