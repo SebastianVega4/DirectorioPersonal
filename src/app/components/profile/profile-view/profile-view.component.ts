@@ -1,15 +1,14 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ContactService } from '../../../services/contact.service';
 import { Contact, Detail } from '../../../models/contact.model';
-import { ProfileMapComponent } from '../profile-map/profile-map.component';
 import { AddDetailFormComponent } from '../add-detail-form/add-detail-form.component';
 import { LoadingComponent } from '../../shared/loading/loading.component';
 
 @Component({
   selector: 'app-profile-view',
   standalone: true,
-  imports: [RouterLink, ProfileMapComponent, AddDetailFormComponent, LoadingComponent],
+  imports: [RouterLink, AddDetailFormComponent, LoadingComponent],
   template: `
     <div class="min-h-screen bg-gray-50">
       <div class="max-w-3xl mx-auto px-4 sm:px-6 py-8">
@@ -78,15 +77,6 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"/>
                           </svg>
                           <span class="text-gray-600">Doc: {{ contact.documento }}</span>
-                        </div>
-                      }
-                      @if (contact.codigo_universidad) {
-                        <div class="flex items-center space-x-2 text-sm">
-                          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 14l9-5-9-5-9 5 9 5z"/>
-                            <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
-                          </svg>
-                          <span class="text-gray-600">Código: {{ contact.codigo_universidad }}</span>
                         </div>
                       }
                       @if (contact.fecha_nacimiento) {
@@ -183,10 +173,7 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
                 @if (contact.latitud && contact.longitud) {
                   <section>
                     <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Ubicación</h3>
-                    <app-profile-map
-                      [latitud]="contact.latitud"
-                      [longitud]="contact.longitud"
-                      [nombre]="contact.nombre_completo" />
+                    <div id="map-container" class="rounded-xl overflow-hidden border border-gray-200" style="height: 300px;"></div>
                   </section>
                 }
 
@@ -223,10 +210,10 @@ import { LoadingComponent } from '../../shared/loading/loading.component';
 export class ProfileViewComponent implements OnInit {
   contact: Contact | null = null;
   loading = true;
+  private mapLoaded = false;
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router,
     private contactService: ContactService
   ) {}
 
@@ -240,8 +227,42 @@ export class ProfileViewComponent implements OnInit {
   }
 
   async loadContact(id: string) {
-    this.contact = await this.contactService.getContactById(id);
+    this.loading = true;
+    try {
+      this.contact = await this.contactService.getContactById(id);
+    } catch (e) {
+      console.error('Error loading contact:', e);
+    }
     this.loading = false;
+
+    if (this.contact?.latitud && this.contact?.longitud && !this.mapLoaded) {
+      setTimeout(() => this.initMap(), 300);
+    }
+  }
+
+  private async initMap() {
+    if (this.mapLoaded) return;
+    try {
+      const L = await import('leaflet');
+      const container = document.getElementById('map-container');
+      if (!container) return;
+
+      const map = L.map('map-container', {
+        center: [this.contact!.latitud!, this.contact!.longitud!],
+        zoom: 14,
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+      }).addTo(map);
+
+      L.marker([this.contact!.latitud!, this.contact!.longitud!]).addTo(map);
+
+      setTimeout(() => map.invalidateSize(), 100);
+      this.mapLoaded = true;
+    } catch (e) {
+      console.error('Error loading map:', e);
+    }
   }
 
   getInitials(): string {

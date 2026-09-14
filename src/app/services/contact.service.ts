@@ -117,35 +117,27 @@ export class ContactService {
     const cached = this.filterCache.get(column);
     if (cached) return cached;
 
-    try {
-      const { data, error } = await this.supabase.supabase
-        .rpc('get_unique_values', { col_name: column });
-
-      if (!error && data) {
-        const values = data.map((r: any) => r[column] || r.value).filter(Boolean).sort();
-        this.filterCache.set(column, values);
-        return values;
-      }
-    } catch (e) {
-      console.warn('RPC failed, using fallback', e);
-    }
-
-    return this.getUniqueValuesFallback(column);
-  }
-
-  private async getUniqueValuesFallback(column: string): Promise<string[]> {
     const { data, error } = await this.supabase.supabase
       .from('directorio')
       .select(column)
       .not(column, 'is', null)
-      .limit(5000);
+      .limit(10000);
 
     if (error || !data) return [];
 
-    const values = [...new Set(data.map((r: any) => r[column]).filter(Boolean))];
-    const sorted = values.sort() as string[];
-    this.filterCache.set(column, sorted);
-    return sorted;
+    const seen = new Set<string>();
+    const values: string[] = [];
+    for (const row of data) {
+      const val = (row as any)[column];
+      if (val && !seen.has(val)) {
+        seen.add(val);
+        values.push(val);
+      }
+    }
+
+    values.sort();
+    this.filterCache.set(column, values);
+    return values;
   }
 
   async getUniquePrograms(): Promise<string[]> {
@@ -164,21 +156,6 @@ export class ContactService {
     const cached = this.filterCache.get('tags');
     if (cached) return cached;
 
-    try {
-      const { data, error } = await this.supabase.supabase.rpc('get_all_tags');
-      if (!error && data) {
-        const tags = data.map((r: any) => r.tag || r.value).filter(Boolean).sort();
-        this.filterCache.set('tags', tags);
-        return tags;
-      }
-    } catch (e) {
-      console.warn('RPC failed for tags, using fallback', e);
-    }
-
-    return this.getAllTagsFallback();
-  }
-
-  private async getAllTagsFallback(): Promise<string[]> {
     const { data, error } = await this.supabase.supabase
       .from('directorio')
       .select('tags')
@@ -187,13 +164,19 @@ export class ContactService {
 
     if (error || !data) return [];
 
-    const allTags = new Set<string>();
-    data.forEach((r: any) => {
-      if (r.tags && Array.isArray(r.tags)) {
-        r.tags.forEach((t: string) => allTags.add(t));
+    const seen = new Set<string>();
+    for (const row of data) {
+      const tags = (row as any).tags;
+      if (tags && Array.isArray(tags)) {
+        for (const t of tags) {
+          if (t && !seen.has(t)) {
+            seen.add(t);
+          }
+        }
       }
-    });
-    const sorted = [...allTags].sort();
+    }
+
+    const sorted = [...seen].sort();
     this.filterCache.set('tags', sorted);
     return sorted;
   }
