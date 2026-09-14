@@ -376,25 +376,29 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.computeConflicts();
   }
 
+  private normalizePhone(phone: string): string {
+    return phone.replace(/[^0-9]/g, '');
+  }
+
   computeConflicts() {
     if (!this.mergeSource || !this.mergeTarget) return;
 
-    const fields: { key: string; label: string }[] = [
+    const fields: { key: string; label: string; isPhone?: boolean }[] = [
       { key: 'nombre_completo', label: 'Nombre completo' },
       { key: 'programa', label: 'Programa' },
       { key: 'rol', label: 'Rol' },
       { key: 'ciudad', label: 'Ciudad' },
       { key: 'correo_personal', label: 'Email personal' },
       { key: 'correo_trabajo', label: 'Email trabajo' },
-      { key: 'telefono_celular', label: 'Teléfono' },
+      { key: 'telefono_celular', label: 'Teléfono', isPhone: true },
       { key: 'documento', label: 'Documento' },
       { key: 'foto_url', label: 'Foto' },
       { key: 'codigo_universidad', label: 'Código universidad' },
       { key: 'fecha_nacimiento', label: 'Fecha nacimiento' },
     ];
 
-    const socialFields: { key: string; label: string }[] = [
-      { key: 'wa', label: 'WhatsApp' },
+    const socialFields: { key: string; label: string; isPhone?: boolean }[] = [
+      { key: 'wa', label: 'WhatsApp', isPhone: true },
       { key: 'ig', label: 'Instagram' },
       { key: 'fb', label: 'Facebook' },
     ];
@@ -409,14 +413,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       const sv = (this.mergeSource as any)[field.key];
       const tv = (this.mergeTarget as any)[field.key];
 
-      if (sv && tv && String(sv) !== String(tv)) {
-        this.mergeConflicts.push({
-          key: field.key,
-          label: field.label,
-          sourceValue: sv,
-          targetValue: tv,
-          choice: 'target',
-        });
+      if (sv && tv) {
+        const same = field.isPhone
+          ? this.normalizePhone(String(sv)) === this.normalizePhone(String(tv))
+          : String(sv) === String(tv);
+        if (!same) {
+          this.mergeConflicts.push({
+            key: field.key,
+            label: field.label,
+            sourceValue: sv,
+            targetValue: tv,
+            choice: 'target',
+          });
+        }
       } else if (!tv && sv) {
         this.mergeAutoFill.push({
           key: field.key,
@@ -431,14 +440,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       const sv = sRs[sf.key];
       const tv = tRs[sf.key];
 
-      if (sv && tv && sv !== tv) {
-        this.mergeConflicts.push({
-          key: 'redes_sociales.' + sf.key,
-          label: sf.label,
-          sourceValue: sv,
-          targetValue: tv,
-          choice: 'target',
-        });
+      if (sv && tv) {
+        const same = sf.isPhone
+          ? this.normalizePhone(String(sv)) === this.normalizePhone(String(tv))
+          : sv === tv;
+        if (!same) {
+          this.mergeConflicts.push({
+            key: 'redes_sociales.' + sf.key,
+            label: sf.label,
+            sourceValue: sv,
+            targetValue: tv,
+            choice: 'target',
+          });
+        }
       } else if (!tv && sv) {
         this.mergeAutoFill.push({
           key: 'redes_sociales.' + sf.key,
@@ -473,6 +487,22 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         (merged.redes_sociales as any)[socialKey] = item.value;
       } else {
         (merged as any)[item.key] = item.value;
+      }
+    }
+
+    if (merged.telefono_celular && this.mergeSource.telefono_celular) {
+      const targetNorm = this.normalizePhone(String(merged.telefono_celular));
+      const sourceNorm = this.normalizePhone(String(this.mergeSource.telefono_celular));
+      if (targetNorm === sourceNorm && merged.telefono_celular !== this.mergeSource.telefono_celular) {
+        merged.telefono_celular = this.mergeSource.telefono_celular;
+      }
+    }
+
+    if (merged.redes_sociales?.wa && this.mergeSource.redes_sociales?.wa) {
+      const targetNorm = this.normalizePhone(String(merged.redes_sociales.wa));
+      const sourceNorm = this.normalizePhone(String(this.mergeSource.redes_sociales.wa));
+      if (targetNorm === sourceNorm && merged.redes_sociales.wa !== this.mergeSource.redes_sociales.wa) {
+        merged.redes_sociales.wa = this.mergeSource.redes_sociales.wa;
       }
     }
 

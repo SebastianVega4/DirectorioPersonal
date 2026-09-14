@@ -282,12 +282,18 @@ export class AdminContactFormComponent implements OnInit, OnDestroy, AfterViewIn
     }
   }
 
-  private async initMap() {
+  private async initMap(retries = 5) {
     if (this.mapReady) return;
     try {
-      const L = await import('leaflet');
       const container = document.getElementById('edit-map-container');
-      if (!container) return;
+      if (!container) {
+        if (retries > 0) {
+          setTimeout(() => this.initMap(retries - 1), 300);
+        }
+        return;
+      }
+
+      const L = await import('leaflet');
 
       const defaultLat = this.contact.latitud || 4.6097;
       const defaultLng = this.contact.longitud || -74.0817;
@@ -320,11 +326,14 @@ export class AdminContactFormComponent implements OnInit, OnDestroy, AfterViewIn
         this.cdr.detectChanges();
       });
 
-      setTimeout(() => map.invalidateSize(), 100);
+      setTimeout(() => map.invalidateSize(), 200);
       this.map = map;
       this.mapReady = true;
     } catch (e) {
       console.error('Error loading map:', e);
+      if (retries > 0) {
+        setTimeout(() => this.initMap(retries - 1), 500);
+      }
     }
   }
 

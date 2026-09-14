@@ -255,12 +255,18 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async initMap() {
+  private async initMap(retries = 5) {
     if (this.mapLoaded) return;
     try {
-      const L = await import('leaflet');
       const container = document.getElementById('map-container');
-      if (!container) return;
+      if (!container) {
+        if (retries > 0) {
+          setTimeout(() => this.initMap(retries - 1), 300);
+        }
+        return;
+      }
+
+      const L = await import('leaflet');
 
       const map = L.map('map-container', {
         center: [this.contact!.latitud!, this.contact!.longitud!],
@@ -273,11 +279,14 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
 
       L.marker([this.contact!.latitud!, this.contact!.longitud!]).addTo(map);
 
-      setTimeout(() => map.invalidateSize(), 100);
+      setTimeout(() => map.invalidateSize(), 200);
       this.map = map;
       this.mapLoaded = true;
     } catch (e) {
       console.error('Error loading map:', e);
+      if (retries > 0) {
+        setTimeout(() => this.initMap(retries - 1), 500);
+      }
     }
   }
 
