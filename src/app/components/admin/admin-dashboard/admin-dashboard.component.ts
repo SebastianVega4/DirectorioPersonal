@@ -346,13 +346,15 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  startMerge(source: Contact) {
-    this.mergeSource = source;
+  async startMerge(source: Contact) {
+    const fullSource = await this.contactService.getContactById(source.id);
+    this.mergeSource = fullSource || source;
     this.mergeTarget = null;
     this.mergeSearchTerm = '';
     this.mergeSearchResults = [];
     this.mergeConflicts = [];
     this.showMergeModal = true;
+    this.cdr.detectChanges();
   }
 
   cancelMerge() {
@@ -371,8 +373,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  selectMergeTarget(target: Contact) {
-    this.mergeTarget = target;
+  async selectMergeTarget(target: Contact) {
+    const fullTarget = await this.contactService.getContactById(target.id);
+    this.mergeTarget = fullTarget || target;
     this.computeConflicts();
   }
 
