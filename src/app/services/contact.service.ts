@@ -21,10 +21,15 @@ export class ContactService {
       .select('id,foto_url,nombre_completo,programa,rol,ciudad,tags,favorito');
 
     if (filters.search) {
-      const s = filters.search;
-      query = query.or(
-        `nombre_completo.ilike.%${s}%,documento.ilike.%${s}%,telefono_celular.ilike.%${s}%,correo_personal.ilike.%${s}%,correo_trabajo.ilike.%${s}%,codigo_universidad.ilike.%${s}%`
-      );
+      const words = filters.search.trim().split(/\s+/);
+      const columns = [
+        'nombre_completo', 'documento', 'telefono_celular',
+        'correo_personal', 'correo_trabajo', 'codigo_universidad'
+      ];
+      for (const word of words) {
+        const conditions = columns.map(col => `${col}.ilike.%${word}%`).join(',');
+        query = query.or(conditions);
+      }
     }
     if (filters.programa) {
       query = query.ilike('programa', `%${filters.programa}%`);
