@@ -22,13 +22,24 @@ export class ContactService {
 
     if (filters.search) {
       const words = filters.search.trim().split(/\s+/);
-      const columns = [
-        'nombre_completo', 'documento', 'telefono_celular',
+      const textColumns = [
+        'nombre_completo', 'documento',
         'correo_personal', 'correo_trabajo', 'codigo_universidad'
       ];
+      const phoneColumns = ['telefono_celular'];
+
       for (const word of words) {
-        const conditions = columns.map(col => `${col}.ilike.%${word}%`).join(',');
-        query = query.or(conditions);
+        const textConditions = textColumns.map(col => `${col}.ilike.%${word}%`).join(',');
+
+        const digits = word.replace(/[^0-9]/g, '');
+        const phoneConditions = phoneColumns.length > 0 && digits.length >= 3
+          ? phoneColumns.map(col => `replace(replace(replace(replace(${col},' ',''),'-',''),'+',''),'(','').ilike.%${digits}%`).join(',')
+          : '';
+
+        const allConditions = [textConditions, phoneConditions].filter(Boolean).join(',');
+        if (allConditions) {
+          query = query.or(allConditions);
+        }
       }
     }
     if (filters.programa) {
