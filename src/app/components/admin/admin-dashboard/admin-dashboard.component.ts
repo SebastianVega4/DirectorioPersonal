@@ -393,14 +393,23 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       { key: 'fecha_nacimiento', label: 'Fecha nacimiento' },
     ];
 
+    const socialFields: { key: string; label: string }[] = [
+      { key: 'wa', label: 'WhatsApp' },
+      { key: 'ig', label: 'Instagram' },
+      { key: 'fb', label: 'Facebook' },
+    ];
+
     this.mergeConflicts = [];
     this.mergeAutoFill = [];
+
+    const sRs = (this.mergeSource as any).redes_sociales || {};
+    const tRs = (this.mergeTarget as any).redes_sociales || {};
 
     for (const field of fields) {
       const sv = (this.mergeSource as any)[field.key];
       const tv = (this.mergeTarget as any)[field.key];
 
-      if (sv && tv && sv !== tv) {
+      if (sv && tv && String(sv) !== String(tv)) {
         this.mergeConflicts.push({
           key: field.key,
           label: field.label,
@@ -417,19 +426,52 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         });
       }
     }
+
+    for (const sf of socialFields) {
+      const sv = sRs[sf.key];
+      const tv = tRs[sf.key];
+
+      if (sv && tv && sv !== tv) {
+        this.mergeConflicts.push({
+          key: 'redes_sociales.' + sf.key,
+          label: sf.label,
+          sourceValue: sv,
+          targetValue: tv,
+          choice: 'target',
+        });
+      } else if (!tv && sv) {
+        this.mergeAutoFill.push({
+          key: 'redes_sociales.' + sf.key,
+          label: sf.label,
+          value: sv,
+          selected: true,
+        });
+      }
+    }
   }
 
   async executeMerge() {
     if (!this.mergeSource || !this.mergeTarget) return;
 
-    const merged: Partial<Contact> = { ...this.mergeTarget };
+    const merged: Contact = JSON.parse(JSON.stringify(this.mergeTarget));
 
     for (const conflict of this.mergeConflicts) {
-      (merged as any)[conflict.key] = conflict.choice === 'source' ? conflict.sourceValue : conflict.targetValue;
+      if (conflict.key.startsWith('redes_sociales.')) {
+        const socialKey = conflict.key.split('.')[1];
+        if (!merged.redes_sociales) merged.redes_sociales = {};
+        (merged.redes_sociales as any)[socialKey] = conflict.choice === 'source' ? conflict.sourceValue : conflict.targetValue;
+      } else {
+        (merged as any)[conflict.key] = conflict.choice === 'source' ? conflict.sourceValue : conflict.targetValue;
+      }
     }
 
     for (const item of this.mergeAutoFill) {
-      if (item.selected) {
+      if (!item.selected) continue;
+      if (item.key.startsWith('redes_sociales.')) {
+        const socialKey = item.key.split('.')[1];
+        if (!merged.redes_sociales) merged.redes_sociales = {};
+        (merged.redes_sociales as any)[socialKey] = item.value;
+      } else {
         (merged as any)[item.key] = item.value;
       }
     }
@@ -445,6 +487,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       ...(this.mergeSource.detalles || []),
     ];
     merged.detalles = allDetails;
+
+    if (!merged.redes_sociales) merged.redes_sociales = {};
+    merged.redes_sociales = {
+      ...this.mergeSource.redes_sociales,
+      ...this.mergeTarget.redes_sociales,
+      ...merged.redes_sociales,
+    };
 
     const success = await this.contactService.updateContact(this.mergeTarget.id, merged);
     if (success) {
