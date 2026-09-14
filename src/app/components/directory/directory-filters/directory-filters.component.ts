@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, Subscription } from 'rxjs';
 import { ContactFilters } from '../../../models/contact.model';
@@ -79,7 +79,10 @@ export class DirectoryFiltersComponent implements OnInit, OnDestroy {
   private nameSearch$ = new Subject<string>();
   private sub?: Subscription;
 
-  constructor(private contactService: ContactService) {}
+  constructor(
+    private contactService: ContactService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     this.sub = this.nameSearch$
@@ -104,6 +107,7 @@ export class DirectoryFiltersComponent implements OnInit, OnDestroy {
     this.roles = roles;
     this.ciudades = ciudades.slice(0, 100);
     this.tags = tags.slice(0, 100);
+    this.cdr.markForCheck();
   }
 
   onNameChange() {
