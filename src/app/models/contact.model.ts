@@ -16,6 +16,7 @@ export interface Contact {
   longitud: number | null;
   fecha_nacimiento: string | null;
   detalles: Detail[];
+  favorito: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -71,22 +71,23 @@ export class DirectoryListComponent implements OnInit {
 
   async loadContacts() {
     this.loading = true;
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
     const result = await this.contactService.getContacts(this.currentFilters, this.currentPage);
     this.contacts = result.data;
     this.hasMore = result.hasMore;
     this.loading = false;
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   async loadMore() {
     this.currentPage++;
     this.loading = true;
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
     const result = await this.contactService.getContacts(this.currentFilters, this.currentPage);
     this.contacts = [...this.contacts, ...result.data];
     this.hasMore = result.hasMore;
     this.loading = false;
+    this.cdr.detectChanges();
     this.cdr.markForCheck();
   }
 

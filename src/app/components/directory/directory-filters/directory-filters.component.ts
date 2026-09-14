@@ -107,7 +107,7 @@ export class DirectoryFiltersComponent implements OnInit, OnDestroy {
     this.roles = roles;
     this.ciudades = ciudades.slice(0, 100);
     this.tags = tags.slice(0, 100);
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   onNameChange() {

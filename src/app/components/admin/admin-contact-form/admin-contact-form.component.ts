@@ -246,6 +246,7 @@ export class AdminContactFormComponent implements OnInit {
       longitud: null,
       fecha_nacimiento: null,
       detalles: [],
+      favorito: false,
       created_at: '',
       updated_at: '',
     };

@@ -18,7 +18,7 @@ export class ContactService {
 
     let query = this.supabase.supabase
       .from('directorio')
-      .select('id,foto_url,nombre_completo,programa,rol,ciudad,tags');
+      .select('id,foto_url,nombre_completo,programa,rol,ciudad,tags,favorito');
 
     if (filters.nombre) {
       query = query.ilike('nombre_completo', `%${filters.nombre}%`);
@@ -37,6 +37,7 @@ export class ContactService {
     }
 
     const { data, error } = await query
+      .order('favorito', { ascending: false })
       .order('nombre_completo')
       .range(start, end);
 
@@ -49,6 +50,14 @@ export class ContactService {
     const results = hasMore ? data!.slice(0, this.PAGE_SIZE) : data || [];
 
     return { data: results, hasMore };
+  }
+
+  async toggleFavorito(id: string, favorito: boolean): Promise<boolean> {
+    const { error } = await this.supabase.supabase
+      .from('directorio')
+      .update({ favorito, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    return !error;
   }
 
   async getContactById(id: string): Promise<Contact | null> {

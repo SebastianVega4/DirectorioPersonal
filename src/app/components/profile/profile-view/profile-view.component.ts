@@ -224,20 +224,20 @@ export class ProfileViewComponent implements OnInit {
       this.loadContact(id);
     } else {
       this.loading = false;
-      this.cdr.markForCheck();
+      this.cdr.detectChanges();
     }
   }
 
   async loadContact(id: string) {
     this.loading = true;
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
     try {
       this.contact = await this.contactService.getContactById(id);
     } catch (e) {
       console.error('Error loading contact:', e);
     }
     this.loading = false;
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
 
     if (this.contact?.latitud && this.contact?.longitud && !this.mapLoaded) {
       setTimeout(() => this.initMap(), 300);
