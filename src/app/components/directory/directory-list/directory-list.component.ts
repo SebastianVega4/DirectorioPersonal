@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { DirectoryCardComponent } from '../directory-card/directory-card.component';
 import { DirectoryFiltersComponent } from '../directory-filters/directory-filters.component';
 import { LoadingComponent } from '../../shared/loading/loading.component';
@@ -9,7 +9,6 @@ import { Contact, ContactFilters } from '../../../models/contact.model';
   selector: 'app-directory-list',
   standalone: true,
   imports: [DirectoryCardComponent, DirectoryFiltersComponent, LoadingComponent],
-  changeDetection: ChangeDetectionStrategy.Default,
   template: `
     <div class="min-h-screen">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -60,10 +59,7 @@ export class DirectoryListComponent implements OnInit {
   loading = true;
   currentFilters: ContactFilters = {};
 
-  constructor(
-    private contactService: ContactService,
-    private cdr: ChangeDetectorRef
-  ) {}
+  constructor(private contactService: ContactService) {}
 
   ngOnInit() {
     this.loadContacts();
@@ -71,24 +67,19 @@ export class DirectoryListComponent implements OnInit {
 
   async loadContacts() {
     this.loading = true;
-    this.cdr.detectChanges();
     const result = await this.contactService.getContacts(this.currentFilters, this.currentPage);
     this.contacts = result.data;
     this.hasMore = result.hasMore;
     this.loading = false;
-    this.cdr.detectChanges();
   }
 
   async loadMore() {
     this.currentPage++;
     this.loading = true;
-    this.cdr.detectChanges();
     const result = await this.contactService.getContacts(this.currentFilters, this.currentPage);
     this.contacts = [...this.contacts, ...result.data];
     this.hasMore = result.hasMore;
     this.loading = false;
-    this.cdr.detectChanges();
-    this.cdr.markForCheck();
   }
 
   onFiltersChange(filters: ContactFilters) {

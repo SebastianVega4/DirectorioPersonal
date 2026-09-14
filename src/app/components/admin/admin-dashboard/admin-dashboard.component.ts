@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../services/auth.service';
@@ -229,8 +229,7 @@ export class AdminDashboardComponent implements OnInit {
   constructor(
     private contactService: ContactService,
     private authService: AuthService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
+    private router: Router
   ) {}
 
   ngOnInit() {
@@ -239,14 +238,12 @@ export class AdminDashboardComponent implements OnInit {
 
   async loadContacts() {
     this.loading = true;
-    this.cdr.detectChanges();
     const result = await this.contactService.getContacts(
       { nombre: this.searchTerm },
       this.currentPage
     );
     this.contacts = result.data;
     this.loading = false;
-    this.cdr.detectChanges();
   }
 
   onSearch() {
@@ -264,7 +261,6 @@ export class AdminDashboardComponent implements OnInit {
     const success = await this.contactService.toggleFavorito(contact.id, newVal);
     if (success) {
       contact.favorito = newVal;
-      this.cdr.detectChanges();
     }
   }
 
@@ -275,14 +271,12 @@ export class AdminDashboardComponent implements OnInit {
     this.mergeSearchResults = [];
     this.mergeConflicts = [];
     this.showMergeModal = true;
-    this.cdr.detectChanges();
   }
 
   cancelMerge() {
     this.showMergeModal = false;
     this.mergeSource = null;
     this.mergeTarget = null;
-    this.cdr.detectChanges();
   }
 
   async searchMergeTarget() {
@@ -292,13 +286,11 @@ export class AdminDashboardComponent implements OnInit {
     }
     const result = await this.contactService.getContacts({ nombre: this.mergeSearchTerm }, 0);
     this.mergeSearchResults = result.data.filter((c: Contact) => c.id !== this.mergeSource?.id);
-    this.cdr.detectChanges();
   }
 
   selectMergeTarget(target: Contact) {
     this.mergeTarget = target;
     this.computeConflicts();
-    this.cdr.detectChanges();
   }
 
   computeConflicts() {

@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ContactService } from '../../../services/contact.service';
 import { Contact, Detail } from '../../../models/contact.model';
@@ -214,8 +214,7 @@ export class ProfileViewComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private contactService: ContactService,
-    private cdr: ChangeDetectorRef
+    private contactService: ContactService
   ) {}
 
   ngOnInit() {
@@ -224,20 +223,17 @@ export class ProfileViewComponent implements OnInit {
       this.loadContact(id);
     } else {
       this.loading = false;
-      this.cdr.detectChanges();
     }
   }
 
   async loadContact(id: string) {
     this.loading = true;
-    this.cdr.detectChanges();
     try {
       this.contact = await this.contactService.getContactById(id);
     } catch (e) {
       console.error('Error loading contact:', e);
     }
     this.loading = false;
-    this.cdr.detectChanges();
 
     if (this.contact?.latitud && this.contact?.longitud && !this.mapLoaded) {
       setTimeout(() => this.initMap(), 300);
